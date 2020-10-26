@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"sync"
 	"time"
@@ -50,8 +49,9 @@ func runCacheSyncDBTask(ctx context.Context, projects []string, duration time.Du
 
 // doSyncDB ..
 func doSyncDB(projects []string) {
+	fmt.Println("doSyncDB DBPath", DBPath)
 	for _, project := range projects {
-		content, err := ioutil.ReadFile(DBPath + project)
+		content, err := getRemoteConfig(project, time.Second*60)
 		if err != nil {
 			log.Fatal("doSyncDB call ioutil.ReadFile failed, error:", err)
 		}
