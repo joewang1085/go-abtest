@@ -50,7 +50,11 @@ func main() {
 					printLabData(sdk.GetLabOutput("search", "B", ""))
 					// printLabData(sdk.GetLabOutput("search", "defualt", ""))
 				case "Order":
+					printLabData(sdk.GetLabOutput("Order", "A1->A2-1", ""))
 					printLabData(sdk.GetLabOutput("Order", "A1->A2-2", ""))
+					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-1->B3", ""))
+					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-2->B3", ""))
+					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-1->B3", ""))
 					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-2->B3", ""))
 				case "Display":
 					fmt.Println("按 labPath 查询...")
@@ -298,13 +302,7 @@ func orderLabLayerB3(ctx context.Context) {
 func printLabData(datas []sdk.LabOutput) {
 	fmt.Print("实验结果查询:  ")
 	// printPoint(3)
-	if len(datas) == 0 {
-		fmt.Println("     空")
-		fmt.Println("--------------------分割线-----------------------")
-		return
-	}
 	fmt.Println("结果包含总人数:", len(datas))
-
 	fmt.Println("忽略详细打印...")
 	// 忽略详细打印
 	return

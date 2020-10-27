@@ -8,6 +8,7 @@
 - SetCacheSyncDBFrequency
 
 ## example
+see example/main.go
 
 ```
 ...
