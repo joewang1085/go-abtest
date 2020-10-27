@@ -17,19 +17,13 @@ var (
 
 	// Users 用户数量
 	Users int
-
-	// Address abtest server 地址
-	Address string
-
-	// Port abtest server 端口
-	Port string
 )
 
 func init() {
 	flag.StringVar(&Lab, "lab", "Display", "Lab name")
 	flag.IntVar(&Users, "users", 100, "参与测试的用户总数")
-	flag.StringVar(&Address, "addr", "127.0.0.1", "AB Test Server Address")
-	flag.StringVar(&Port, "port", "9527", "AB Test Server Port")
+	flag.StringVar(&sdk.Address, "addr", "127.0.0.1", "AB Test Server Address")
+	flag.StringVar(&sdk.Port, "port", "9527", "AB Test Server Port")
 }
 
 func main() {
