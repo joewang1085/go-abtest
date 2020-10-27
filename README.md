@@ -11,10 +11,12 @@
 
 ```
 ...
-targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
+targetZone := sdk.GetABTZone(projectID, userID, layerID, date)
 	switch true {
 	case "A" == targetZone.Value:
+	      // Do Lab A
 	case "B" == targetZone.Value:
+	      // Do Lab B
 	default:
 	}
 ```
