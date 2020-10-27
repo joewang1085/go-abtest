@@ -5,27 +5,35 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"os"
 	"strconv"
 	"time"
 
 	"github.com/go-abtest/sdk"
 )
 
-// Lab 名称
-var Lab string
+var (
+	// Lab 名称
+	Lab string
 
-// Users 用户数量
-var Users int
+	// Users 用户数量
+	Users int
+
+	// Address abtest server 地址
+	Address string
+
+	// Port abtest server 端口
+	Port string
+)
 
 func init() {
 	flag.StringVar(&Lab, "lab", "Display", "Lab name")
 	flag.IntVar(&Users, "users", 100, "参与测试的用户总数")
+	flag.StringVar(&Address, "addr", "127.0.0.1", "AB Test Server Address")
+	flag.StringVar(&Port, "port", "9527", "AB Test Server Port")
 }
 
 func main() {
 	flag.Parse()
-	sdk.DBPath = os.Getenv("GOPATH") + "/src" + "/github.com/go-abtest/example/db/"
 
 	// SetCacheSyncDBFrequency
 	fmt.Println("设置缓存同步数据库周期")

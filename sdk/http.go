@@ -9,14 +9,10 @@ import (
 
 var (
 	defaultHTTPClient *http.Client = http.DefaultClient
-
-	port string = "9527"
-
-	address string = "127.0.0.1"
 )
 
 func getRemoteConfig(projectID string, timeout time.Duration) ([]byte, error) {
-	url := fmt.Sprintf("http://%s:%s/DescribeConfig", address, port)
+	url := fmt.Sprintf("http://%s:%s/DescribeConfig", Address, Port)
 	defaultHTTPClient.Timeout = timeout
 	params := make(map[string][]string)
 	params["project"] = []string{projectID}

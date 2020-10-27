@@ -6,7 +6,6 @@
 package sdk
 
 import (
-	"os"
 	"time"
 )
 
@@ -17,8 +16,14 @@ const (
 )
 
 var (
-	// DBPath 实验配置中心
-	DBPath = os.Getenv("GOPATH") + "/github.com/go-abtest/example/db"
+	// Port abtest server 端口
+	Port string = "9527"
+
+	// Address abtest server 地址
+	Address string = "127.0.0.1"
+
+	// DefaultTimeout http request timeout
+	DefaultTimeout time.Duration = time.Second * 60
 )
 
 // Layer 层，只属于某一个域，同一个域的不同层正交, ParentZonesIDs为空则表示第一层
