@@ -18,7 +18,8 @@ import (
 var (
 
 	// cacheTestABTZonesCache for demo test, ABT config cache
-	cacheTestABTZonesCache map[string][]*Zone = make(map[string][]*Zone)
+	// cacheTestABTZonesCache map[string][]*Zone = make(map[string][]*Zone)
+	cacheTestABTZonesCache sync.Map
 
 	// CTX , CatcheCancer catch 同步任务上下文，单例
 	cacheCTX context.Context
@@ -59,7 +60,12 @@ func doSyncDB(projects []string) {
 		if err != nil {
 			log.Fatal("doSyncDB call json.Unmarshal failed, error:", err)
 		}
-		cacheTestABTZonesCache[project] = append(cacheTestABTZonesCache[project], zones...)
+		cacheZones, ok := cacheTestABTZonesCache.Load(project)
+		if ok {
+			cacheTestABTZonesCache.Store(project, append(cacheZones.([]*Zone), zones...))
+		} else {
+			cacheTestABTZonesCache.Store(project, zones)
+		}
 	}
 	fmt.Println("Once doSyncDB syncing task done!")
 }

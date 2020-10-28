@@ -131,9 +131,14 @@ func matchZone(zones []*Zone, projectID, globalID, layerID, date string) *Zone {
 }
 
 func getZonesByProjectIDandLayerID(projectID, layerID string) []*Zone {
+	cacheZones, ok := cacheTestABTZonesCache.Load(projectID)
+	if !ok {
+		return make([]*Zone, 0)
+	}
+
 	// 从缓存中获取
 	zones := make([]*Zone, 0)
-	for _, zone := range cacheTestABTZonesCache[projectID] {
+	for _, zone := range cacheZones.([]*Zone) {
 		if layerID == zone.LayerID {
 			zones = append(zones, zone)
 		}
