@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/go-abtest/example/lab"
 	"math/rand"
 	"strconv"
 	"time"
@@ -20,7 +21,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&Lab, "lab", "Display", "Lab name")
+	flag.StringVar(&Lab, "lab", "ComplexColor", "Lab name")
 	flag.IntVar(&Users, "users", 100, "参与测试的用户总数")
 	flag.StringVar(&sdk.Address, "addr", "127.0.0.1", "AB Test Server Address")
 	flag.StringVar(&sdk.Port, "port", "9527", "AB Test Server Port")
@@ -31,38 +32,35 @@ func main() {
 
 	// SetCacheSyncDBFrequency
 	fmt.Println("设置缓存同步数据库周期")
-	sdk.SetCacheSyncDBFrequency([]string{"search", "Order", "Display"}, time.Second*60)
+	sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor"}, time.Second*60)
 
 	// 开启实验统计线程
 	go func() {
 		// 实验 数据统计
-		// sdk.LabOutputCache.Range(func(k, v interface{}) bool {
-		// 	fmt.Println("Debug for LabOutputCache: ", k, v)
-		// 	return true
-		// })
 		fmt.Println("\n开启实验数据统计 线程...")
 		for {
 			select {
-			case <-time.Tick(time.Second * 10):
+			case <-time.Tick(time.Second * 5):
 				switch Lab {
-				case "search":
-					printLabData(sdk.GetLabOutput("search", "A", ""))
-					printLabData(sdk.GetLabOutput("search", "B", ""))
-					// printLabData(sdk.GetLabOutput("search", "defualt", ""))
-				case "Order":
-					printLabData(sdk.GetLabOutput("Order", "A1->A2-1", ""))
-					printLabData(sdk.GetLabOutput("Order", "A1->A2-2", ""))
-					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-1->B3", ""))
-					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-2->B3", ""))
-					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-1->B3", ""))
-					printLabData(sdk.GetLabOutput("Order", "B2-1->B2-2->B3", ""))
-				case "Display":
-					fmt.Println("按 labPath 查询...")
-					printLabData(sdk.GetLabOutput("Display", "A", ""))
-					printLabData(sdk.GetLabOutput("Display", "B", ""))
-					// fmt.Println("按 tagPath 查询...")
-					// printLabData(sdk.GetLabOutput("Display", "A", "A1"))
-					// printLabData(sdk.GetLabOutput("Display", "A", "A2"))
+				case "Home":
+					sdk.DebugOutput()
+					printLabData(sdk.GetLabOutput("Home", "A", ""))
+					printLabData(sdk.GetLabOutput("Home", "B", ""))
+					printLabData(sdk.GetLabOutput("Home", "C", ""))
+					printLabData(sdk.GetLabOutput("Home", "D", ""))
+				case "Color":
+					printLabData(sdk.GetLabOutput("Color", "A->D", ""))
+					printLabData(sdk.GetLabOutput("Color", "A->E", ""))
+					printLabData(sdk.GetLabOutput("Color", "B->D", ""))
+					printLabData(sdk.GetLabOutput("Color", "B->E", ""))
+					printLabData(sdk.GetLabOutput("Color", "C->D", ""))
+					printLabData(sdk.GetLabOutput("Color", "C->E", ""))
+				case "ComplexColor":
+					// sdk.DebugOutput()
+					printLabData(sdk.GetLabOutput("ComplexColor", "A->D", ""))
+					printLabData(sdk.GetLabOutput("ComplexColor", "B->D", ""))
+					printLabData(sdk.GetLabOutput("ComplexColor", "B->E", ""))
+					printLabData(sdk.GetLabOutput("ComplexColor", "C->E", ""))
 				}
 			}
 		}
@@ -71,15 +69,25 @@ func main() {
 
 	fmt.Print(fmt.Sprintf("实验（%s） 进行中...", Lab))
 	userIDPrefix := 34082219900000
-	// printPoint(3)
+
+	// start lab
 	for userID := 1 + userIDPrefix; userID <= Users+userIDPrefix; userID++ {
+		// 定义输出0
+		labOutput := &sdk.LabOutput{
+			ProjectID: Lab,
+			UserID:    strconv.Itoa(userID),
+			Time:      time.Now(),
+			Data:      make(map[string]interface{}), // TODO: 优化数据结构
+			LabPath:   make([]string, 0),            // TODO: 优化数据结构
+		}
+		ctx := context.WithValue(context.Background(), sdk.CTXKey("output"), labOutput)
 		switch Lab {
-		case "search":
-			ProjectSearchService(strconv.Itoa(userID))
-		case "Order":
-			ProjectOrderService(strconv.Itoa(userID))
-		case "Display":
-			ProjectDisplayService(strconv.Itoa(userID))
+		case "Home":
+			lab.HomeLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
+		case "Color":
+			lab.ColorLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
+		case "ComplexColor":
+			lab.ComplexLabColorLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
 		}
 		if userID%10 == 0 {
 			time.Sleep(1 * time.Second)
@@ -90,216 +98,7 @@ func main() {
 	<-c
 }
 
-// ProjectSearchService project search 业务
-func ProjectSearchService(userID string) {
-	// start lab
-	ctx := context.Background()
-	labOutput := sdk.LabOutput{
-		ProjectID: "search",
-		UserID:    userID,
-		Time:      time.Now(),
-		Data:      make(map[string]interface{}), // TODO: 优化数据结构
-		LabPath:   make([]string, 0),            // TODO: 优化数据结构
-	}
-
-	searchLabLayer1(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-}
-
-func searchLabLayer1(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "search"
-	layerID := "1"
-	userID := labOutput.UserID
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	switch targetZone.Value {
-	case "A":
-		labOutput.Data["1-Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, "A")
-		labOutput.TagPath = append(labOutput.TagPath, "A")
-	case "B":
-		labOutput.Data["1-Score"] = 95
-		labOutput.LabPath = append(labOutput.LabPath, "B")
-		labOutput.TagPath = append(labOutput.TagPath, "B")
-	default:
-		// ...省略业务
-		labOutput.Data["1-Score"] = 95
-		labOutput.LabPath = append(labOutput.LabPath, "defualt")
-		labOutput.TagPath = append(labOutput.TagPath, "defualt")
-	}
-
-	// push lab output
-	// fmt.Println("push lab output,debug", labOutput)
-	sdk.PushLabOutPut(labOutput)
-}
-
-// ProjectDisplayService project Display 业务
-func ProjectDisplayService(userID string) {
-	// start lab
-	ctx := context.Background()
-	labOutput := sdk.LabOutput{
-		ProjectID: "Display",
-		UserID:    userID,
-		UserGroup: getUserGroup(userID),
-		Time:      time.Now(),
-		Data:      make(map[string]interface{}), // TODO: 优化数据结构
-		LabPath:   make([]string, 0),            // TODO: 优化数据结构
-	}
-
-	displayLabLayer1(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-}
-
-func displayLabLayer1(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "Display"
-	layerID := "1"
-	userID := labOutput.UserID
-
-	// TODO: 选用什么作为分流的条件，应该在ABT server配置好，这样程序可以更灵活，
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	// fmt.Println("debug:", targetZone.Value, targetZone.Tag)
-	switch true {
-	case "A" == targetZone.Value && checkUserGroup(targetZone.UserGroups, labOutput.UserGroup):
-		labOutput.Data["Score"] = 83
-		labOutput.LabPath = append(labOutput.LabPath, targetZone.Value)
-		labOutput.TagPath = append(labOutput.TagPath, targetZone.Tag)
-	case "B" == targetZone.Value && checkUserGroup(targetZone.UserGroups, labOutput.UserGroup):
-		labOutput.Data["Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, targetZone.Value)
-		labOutput.TagPath = append(labOutput.TagPath, targetZone.Tag)
-	default:
-		// ...省略业务
-	}
-
-	// push lab output
-	// fmt.Println("push lab output,debug", labOutput)
-	sdk.PushLabOutPut(labOutput)
-}
-
-// ProjectOrderService project order 业务
-func ProjectOrderService(userID string) {
-	// start lab
-	ctx := context.Background()
-	labOutput := sdk.LabOutput{
-		ProjectID: "Order ",
-		UserID:    userID,
-		Time:      time.Now(),
-		Data:      make(map[string]interface{}),
-		LabPath:   make([]string, 0),
-	}
-
-	// TODO: 水平控制
-	orderLabLayer1(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	// orderLabLayerA2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	// orderLabLayerB2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	// orderLabLayerB3(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-
-}
-
-func orderLabLayer1(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "Order"
-	layerID := "1"
-	userID := labOutput.UserID
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	// fmt.Println("debug,orderLabLayer1, project, userID, layerID, targetZone.Value ", project, userID, layerID, targetZone.Value)
-	switch targetZone.Value {
-	case "A1":
-		labOutput.Data["1-Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, "A1")
-		labOutput.TagPath = append(labOutput.TagPath, "A1")
-		orderLabLayerA2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	case "B1-1":
-		labOutput.Data["1-Score"] = 80
-		labOutput.LabPath = append(labOutput.LabPath, "B1-1")
-		labOutput.TagPath = append(labOutput.TagPath, "B1-1")
-		orderLabLayerB2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	case "B1-2":
-		labOutput.Data["1-Score"] = 95
-		labOutput.LabPath = append(labOutput.LabPath, "B2-1")
-		labOutput.TagPath = append(labOutput.TagPath, "B2-1")
-		orderLabLayerB2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	default:
-		// ...省略业务
-		labOutput.LabPath = append(labOutput.LabPath, "defualt")
-		labOutput.TagPath = append(labOutput.TagPath, "defualt")
-		orderLabLayerA2(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	}
-}
-
-func orderLabLayerA2(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "Order"
-	layerID := "A2"
-	userID := labOutput.UserID
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	switch targetZone.Value {
-	case "A2-1":
-		labOutput.Data["A2-Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, "A2-1")
-		labOutput.TagPath = append(labOutput.TagPath, "A2-1")
-	case "A2-2":
-		labOutput.Data["A2-Score"] = 95
-		labOutput.LabPath = append(labOutput.LabPath, "A2-2")
-		labOutput.TagPath = append(labOutput.TagPath, "A2-2")
-	default:
-		// ...省略业务
-		labOutput.LabPath = append(labOutput.LabPath, "defualt")
-		labOutput.TagPath = append(labOutput.TagPath, "defualt")
-	}
-
-	// push lab output
-	// fmt.Println("push lab output,debug", labOutput)
-	sdk.PushLabOutPut(labOutput)
-}
-
-func orderLabLayerB2(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "Order"
-	layerID := "B2"
-	userID := labOutput.UserID
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	switch targetZone.Value {
-	case "B2-1":
-		labOutput.Data["B2-Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, "B2-1")
-		labOutput.TagPath = append(labOutput.TagPath, "B2-1")
-		orderLabLayerB3(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	case "B2-2":
-		labOutput.Data["B2-Score"] = 95
-		labOutput.LabPath = append(labOutput.LabPath, "B2-2")
-		labOutput.TagPath = append(labOutput.TagPath, "B2-2")
-		orderLabLayerB3(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	default:
-		// ...省略业务
-		labOutput.LabPath = append(labOutput.LabPath, "defualt")
-		labOutput.TagPath = append(labOutput.TagPath, "defualt")
-		orderLabLayerB3(context.WithValue(ctx, sdk.CTXKey("output"), labOutput))
-	}
-}
-
-func orderLabLayerB3(ctx context.Context) {
-	labOutput := ctx.Value(sdk.CTXKey("output")).(sdk.LabOutput)
-	project := "Order"
-	layerID := "B3"
-	userID := labOutput.UserID
-	targetZone := sdk.GetABTZone(project, userID, layerID, strconv.Itoa(int(time.Now().Unix()/3600/24)))
-	switch targetZone.Value {
-	case "B3":
-		labOutput.Data["B3-Score"] = 90
-		labOutput.LabPath = append(labOutput.LabPath, "B3")
-		labOutput.TagPath = append(labOutput.TagPath, "B3")
-	default:
-		// ...省略业务
-		labOutput.LabPath = append(labOutput.LabPath, "defualt")
-		labOutput.TagPath = append(labOutput.TagPath, "defualt")
-	}
-
-	// push lab output
-	// fmt.Println("push lab output,debug", labOutput)
-	sdk.PushLabOutPut(labOutput)
-}
-
-func printLabData(datas []sdk.LabOutput) {
+func printLabData(datas []*sdk.LabOutput) {
 	fmt.Print("实验结果查询:  ")
 	// printPoint(3)
 	fmt.Println("结果包含总人数:", len(datas))
@@ -352,16 +151,6 @@ func getUserGroup(userID string) string {
 	default:
 		return "Others"
 	}
-}
-
-func checkUserGroup(groups []string, cur string) bool {
-	for _, group := range groups {
-		if cur == group {
-			return true
-		}
-	}
-
-	return false
 }
 
 func printPoint(n int) {
