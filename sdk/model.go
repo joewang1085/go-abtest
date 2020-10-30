@@ -29,7 +29,7 @@ var (
 // Layer 层，只属于某一个域，同一个域的不同层正交, ParentZonesIDs为空则表示第一层
 type Layer struct {
 	LayerID     string  // 全局唯一：格式：layerxxx (组合主键)
-	ParentZones []*Zone // 父域,用来规则正确性校验 (组合主键)
+	ParentZones []*Zone // 父域,用来规则正确性校验   // TODO: 层的父域互斥，不能正交，增加校验
 	TotalWeight uint32  // 总权重，该层的所有域的权重和等于总权重
 }
 
