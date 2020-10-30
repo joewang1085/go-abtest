@@ -43,7 +43,7 @@ func main() {
 			case <-time.Tick(time.Second * 5):
 				switch Lab {
 				case "Home":
-					sdk.DebugOutput()
+					// sdk.DebugOutput()
 					printLabData(sdk.GetLabOutput("Home", "A", ""))
 					printLabData(sdk.GetLabOutput("Home", "B", ""))
 					printLabData(sdk.GetLabOutput("Home", "C", ""))
