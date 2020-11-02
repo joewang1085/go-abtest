@@ -32,7 +32,7 @@ func main() {
 
 	// SetCacheSyncDBFrequency
 	fmt.Println("设置缓存同步数据库周期")
-	sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor"}, time.Second*60)
+	sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
 
 	// 开启实验统计线程
 	go func() {
@@ -56,11 +56,25 @@ func main() {
 					printLabData(sdk.GetLabOutput("Color", "C->D", ""))
 					printLabData(sdk.GetLabOutput("Color", "C->E", ""))
 				case "ComplexColor":
-					// sdk.DebugOutput()
+					sdk.DebugOutput()
 					printLabData(sdk.GetLabOutput("ComplexColor", "A->D", ""))
 					printLabData(sdk.GetLabOutput("ComplexColor", "B->D", ""))
 					printLabData(sdk.GetLabOutput("ComplexColor", "B->E", ""))
 					printLabData(sdk.GetLabOutput("ComplexColor", "C->E", ""))
+				case "Theme":
+					// sdk.DebugOutput()
+					printLabData(sdk.GetLabOutput("Theme", "A->C->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "A->C->G", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->C->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->C->G", ""))
+					printLabData(sdk.GetLabOutput("Theme", "A->D->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "A->D->G", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->D->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->D->G", ""))
+					printLabData(sdk.GetLabOutput("Theme", "A->E->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "A->E->G", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->E->F", ""))
+					printLabData(sdk.GetLabOutput("Theme", "B->E->G", ""))
 				}
 			}
 		}
@@ -88,6 +102,8 @@ func main() {
 			lab.ColorLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
 		case "ComplexColor":
 			lab.ComplexLabColorLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
+		case "Theme":
+			lab.ThemeLayer1(ctx, fmt.Sprintf("userID:%d,date:%d", userID, time.Now().UnixNano()/3600/24))
 		}
 		if userID%10 == 0 {
 			time.Sleep(1 * time.Second)
