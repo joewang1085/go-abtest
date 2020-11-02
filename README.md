@@ -187,6 +187,12 @@ targetZone := sdk.GetABTZone(hashkey, "Layer2-3 ID")
 ...省略上下文...
 ```
 
+# 跨进城 AB test 设计
+举例: 显示主题 AB Test 设计.  
+1. PM通过AB test server 生成实验配置，并将需求告知开发，实验配置构思如下：
+![avatar](picture/five.png)   
+2. 数据上报可以在最后统一上报，因此需要在远程调用时通过ctx将数据传递下去。也可以在每个进程单独上报，这样就不需要通过ctx传递数据，尤其是上报的数据较大时。
+3. 其他类似。
 
 # ab test server demo 说明
 1. db.Datainit() is a mock of database
@@ -201,7 +207,7 @@ targetZone := sdk.GetABTZone(hashkey, "Layer2-3 ID")
 
 # 稳定性设计 
 1. 网络超时问题，由于网络请求是在单独的线程进行，因此不会阻塞业务。
-2. 单点故障问题，同上。但是sdk请求返回结果为空，业务必须增加默认策略分支，保证业务正常。
+2. 单点故障问题，同上。但是sdk请求返回结果为空，因此业务必须增加默认策略分支，保证业务正常。
 
 # 参考链接
 ```
