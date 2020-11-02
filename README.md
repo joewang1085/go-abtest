@@ -10,40 +10,74 @@ AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）�
 基于我们的现状，采用“一套代码”方案。  
 
 # AB Test 实验流程与架构
-1. PM 通过AB test server创建生成实验配置文件。
-2. 开发人员根据实验配置，通过abtest sdk实现业务分支控制，并上线。（需要人为约定规范，开发需要能理解实验配置，因此建议实验设计是开发和PM一起制定）
-3. 用户流量进入业务，sdk会获取AB test server 的实验配置，并缓存本地，然后进行hash和取模运算，进行随机分流，使用户进入不同的实验。前端预留用户体验评价的入口，后台业务服务同时进行数据采点。
-4. PM 通过AB test server 进行实验数据的实时或离线观察
-5. 实验结果选择出最优策略后，先通过AB test server将流量全部导入最优策略的分支
+1. PM 通过AB test server创建生成实验配置文件。 
+2. 开发人员根据实验配置，通过abtest sdk实现业务分支控制，并上线。（需要人为约定规范，开发需要能理解实验配置，因此建议实验设计是开发和PM一起制定） 
+3. 用户流量进入业务，sdk会获取AB test server 的实验配置，并缓存本地，然后进行hash和取模运算，进行随机分流，使用户进入不同的实验。前端预留用户体验评价的入口，后台业务服务同时进行数据采点。  
+4. PM 通过AB test server 进行实验数据的实时或离线观察  
+5. 实验结果选择出最优策略后，先通过AB test server将流量全部导入最优策略的分支  
 6. 开发人员删除abtest 代码，迭代上线   
 如下图：
 ![avatar](picture/system.png)
-![avatar](picture/system2.png)
 
 # 注意
 目前只支持golang sdk  
 
 # AB Test SDK 中相关概念说明
+1. Project: 一个完整的 AB Test实验，对应着 AB test server 数据库的一个完整的实验配置。不同的 Project 相互独立。PM 通过 AB test server 定义一个 Project, 并设计完整的实验配置。开发通过 sdk 同步指定的 Project 实验配置，并实现实验业务逻辑。在一个 Project 内部通过 Zone 和 Layer 的切割与组合，实现对流量的细分。
 1. Zone: 域，属于某一个层，同一层的不同域流量互斥，且同一层的所有域的流量总和等于进入该层的全部流量。域横向切割一个层的流量，为该层测试“因素”的实验场景之一。
-2. Layer: 层，流量来自一个或者多个域，这些域被称为“父域”。在同一层中进行一个“因素”的AB test实验。不同层的流量正交，可以进行“多因素”的组合对比测试。流量在层中随机分配，因此同一个“父域”只能指向一个“下层”，无法同时指向两个不同的“下层”。 同时，“父域”的流量只能指向“层”，无法指定到“下层的域”，因为，进入“层”的流量会再次随机分配。 
+2. Layer: 层，流量来自一个或者多个域，这些域被称为“父域”。在同一层中进行一个“因素”的 AB test 实验。不同层的流量正交，可以进行“多因素”的组合对比测试。流量在层中随机分配，因此同一个“父域”只能指向一个“下层”，无法同时指向两个不同的“下层”。 同时，“父域”的流量只能指向“层”，无法指定到“下层的域”，因为，进入“层”的流量会再次随机分配。 
 3. 起始域为全流量
 4. 起始层，流量来自于起始域，为全流量
-5. 通过同一层域的切割，与不同层的正交，可以进行多个因素任意的组合对比测试。如下图： 
+5. 通过同一层域的切割，与不同层的正交，可以进行多个因素任意的组合对比测试。如下图，为 Project: Subtitle 的实验设计。
 ![avatar](picture/zone.png)
 
 
 # AB Test SDK 中 hash 算法
 1. 	流量分流的方式：
-	- hash(userID, layerID) : userID是对用户随机分流，layerID是为了进入下一层后又随机分流
-	- hash(cookie(deviceID等), layerID) : 也可以使用其他的全局唯一ID，如 deviceID
-	- hash(userID, Date, layerID) : Date 是为了同同一个用户可以按时间进行重新流量分配，如Date等于日期的时候，同一个用户每天进行的实验是重新随机的
-	- hash(cookie(deviceID等), Date, layerID)
+	- hash算法根据传入的 haskkey 作 hash取模运算来实现随机分流
+	- 为保证同一个用户进入的实验始终是唯一，使得用户不会在 AB 实验中反复横跳。因此hashkey 通常使用 userID/deviceID 等唯一性的ID 保证 hash 取值的唯一性
+	- 某些与时间相关的场景，比如为了实现用户每天进行的 AB 实验都是随机的，可以 对 userID + date(日期) 进行hash,使得用户每天进入的 AB 实验都是随机的。
+	- 同时，在多层实验设计中，进入下一层的流量应该再次随机分配，对 userID + layerID 进行hash, 使得流量进入每层之后又再次随机分流。在本框架设计中，每层的流量都会再次随机分配，因此layerID 是求hash 值的必传参数  
+    - 其中 userID/deviceID/date 等在某些场景中需要拼接成hashkey透传下去，每层根据透传的
+	举例： AB 实验一共两层，需要对所有的用户进行 AB test， 代码可以设计为：
+	```
+	// 调用实验, 使用 userID 作为 hashkey, 透传下去
+	Layer1(ctx, userID)
+	...省略...
+	func Layer1(ctx context.Context, hashkey string) {
+		...
+		// 根据 hashkey 、 layerID 分流
+		targetZone := sdk.GetABTZone(project, hashkey, layerID) 
+		...
+	}
+	...省略...
+	```
 
 # AB Test SDK 中 实验配置 本地缓存
-1. sdk 通过一个线程轮询AB test server的实验配置，并缓存本地
+1. sdk 通过一个线程轮询AB test server的实验配置，并缓存本地。可以通过 sdk 指定的实验Project和设置同步周期。
+```
+sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
+```
 
 # AB Test SDK 中 数据采点
 1. 实验在每一层都可以进行数据收集，并通过ctx传到下一层，并最终上传数据中心
+```
+... 省略上下文 ...
+// 定义输出0
+		labOutput := &sdk.LabOutput{
+			ProjectID: Lab,
+			UserID:    strconv.Itoa(userID),
+			Time:      time.Now(),
+			Data:      make(map[string]interface{}), 
+			LabPath:   make([]string, 0),           
+		}
+		ctx := context.WithValue(context.Background(), sdk.CTXKey("output"), labOutput)
+... 省略上下文 ...
+// 数据上报
+    labOutput.Data["点击次数"] = 10
+	sdk.PushLabOutPut(labOutput) 
+... 省略上下文 ...
+```
 
 # 单一因素AB test设计 
 举例: APP 新主页首页AB Test 设计.  
