@@ -40,7 +40,7 @@ func main() {
 		fmt.Println("\n开启实验数据统计 线程...")
 		for {
 			select {
-			case <-time.Tick(time.Second * 5):
+			case <-time.Tick(time.Second * 10):
 				switch Lab {
 				case "Home":
 					// sdk.DebugOutput()

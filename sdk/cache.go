@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 	// "github.com/go-abtest/sdk/model"
@@ -53,12 +52,14 @@ func doSyncDB(projects []string) {
 	for _, project := range projects {
 		content, err := getRemoteConfig(project, time.Second*60)
 		if err != nil {
-			log.Fatal("doSyncDB call ioutil.ReadFile failed, error:", err)
+			fmt.Println("doSyncDB call ioutil.ReadFile failed, error:", err)
+			return
 		}
 		zones := make([]*Zone, 0)
 		err = json.Unmarshal(content, &zones)
 		if err != nil {
-			log.Fatal("doSyncDB call json.Unmarshal failed, error:", err)
+			fmt.Println("doSyncDB call json.Unmarshal failed, error:", err)
+			return
 		}
 		cacheZones, ok := cacheTestABTZonesCache.Load(project)
 		if ok {
