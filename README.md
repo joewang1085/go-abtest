@@ -31,6 +31,11 @@ AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）�
 5. 通过同一层域的切割，与不同层的正交，可以进行多个因素任意的组合对比测试。如下图，为 Project: Subtitle 的实验设计。
 ![avatar](picture/zone.png)
 
+# AB Test SDK 中 实验配置 本地缓存
+1. sdk 通过一个线程轮询AB test server的实验配置，并缓存本地。可以通过 sdk 指定的实验Project和设置同步周期。因此在进程的初始化阶段需要调用以下方法进行设置。
+```
+sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
+```
 
 # AB Test SDK 中 hash 算法
 1. 	流量分流的方式：
@@ -39,7 +44,7 @@ AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）�
 	- 某些与时间相关的场景，比如为了实现用户每天进行的 AB 实验都是随机的，可以 对 userID + date(日期) 进行hash,使得用户每天进入的 AB 实验都是随机的。
 	- 同时，在多层实验设计中，进入下一层的流量应该再次随机分配，对 userID + layerID 进行hash, 使得流量进入每层之后又再次随机分流。在本框架设计中，每层的流量都会再次随机分配，因此layerID 是求hash 值的必传参数  
     - 其中 userID/deviceID/date 等在某些场景中需要拼接成hashkey透传下去，每层根据透传的
-	举例： AB 实验一共两层，需要对所有的用户进行 AB test， 代码可以设计为：
+	举例： AB 实验需要对所有的用户进行 AB test， 代码可以设计为：
 	```
 	// 调用实验, 使用 userID 作为 hashkey, 透传下去
 	Layer1(ctx, userID)
@@ -53,29 +58,30 @@ AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）�
 	...省略...
 	```
 
-# AB Test SDK 中 实验配置 本地缓存
-1. sdk 通过一个线程轮询AB test server的实验配置，并缓存本地。可以通过 sdk 指定的实验Project和设置同步周期。
-```
-sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
-```
-
 # AB Test SDK 中 数据采点
 1. 实验在每一层都可以进行数据收集，并通过ctx传到下一层，并最终上传数据中心
 ```
 ... 省略上下文 ...
 // 定义输出0
-		labOutput := &sdk.LabOutput{
-			ProjectID: Lab,
-			UserID:    strconv.Itoa(userID),
-			Time:      time.Now(),
-			Data:      make(map[string]interface{}), 
-			LabPath:   make([]string, 0),           
-		}
-		ctx := context.WithValue(context.Background(), sdk.CTXKey("output"), labOutput)
+labOutput := &sdk.LabOutput{
+	ProjectID: Lab,
+	UserID:    strconv.Itoa(userID),
+	Time:      time.Now(),
+	Data:      make(map[string]interface{}), 
+	LabPath:   make([]string, 0),           
+}
+ctx := context.WithValue(context.Background(), sdk.CTXKey("output"), labOutput)
+// 调用实验
+Layer1(ctx, userID)
 ... 省略上下文 ...
-// 数据上报
-    labOutput.Data["点击次数"] = 10
-	sdk.PushLabOutPut(labOutput) 
+func Layer1(ctx context.Context, hashkey string) {
+		...
+		// 数据上报
+		labOutput.Data["点击次数"] = 10
+		sdk.PushLabOutPut(labOutput) 
+		...
+
+}
 ... 省略上下文 ...
 ```
 
