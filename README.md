@@ -152,8 +152,7 @@ func Layer2(ctx context.Context, hashkey string) {
 	- 作用：设置异步同步 AB test server 实验配置线程的指定实验和同步间隔
 	- 原理：单独的一个线程异步同步server端的实验配置
 	- 参数projects: 指定需要同步的实验project
-	- 参数duration: 同步轮询的间隔
-    - 原理
+	- 参数duration: 同步轮询的间隔   
 使用举例：
 ```
 sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
@@ -165,7 +164,7 @@ sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, 
 	- 参数projectID: 指定实验
 	- 参数hashkey: 根据 hashkey + layerID 进行 hash取模运算，实现随机分流
 	- 参数layerID: 当前所在实验层的ID
-	- 返回值*Zone: 即根据运算后随机匹配的实验场景
+	- 返回值*Zone: 即根据运算后随机匹配的实验场景  
 使用举例：
 ```
 	targetZone := sdk.GetABTZone(project, hashkey, layerID)
