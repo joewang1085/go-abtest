@@ -28,9 +28,16 @@ AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）�
 2. Layer: 层，流量来自一个或者多个域，这些域被称为“父域”。在同一层中进行一个“因素”的 AB test 实验。不同层的流量正交，可以进行“多因素”的组合对比测试。流量在层中随机分配，因此同一个“父域”只能指向一个“下层”，无法同时指向两个不同的“下层”。 同时，“父域”的流量只能指向“层”，无法指定到“下层的域”，因为，进入“层”的流量会再次随机分配。 
 3. 起始域为全流量
 4. 起始层，流量来自于起始域，为全流量
-5. 通过同一层域的切割，与不同层的正交，可以进行多个因素任意的组合对比测试。如下图，为 Project: Subtitle 的实验设计。  
+5. 通过同一层域的切割，与不同层的正交，可以进行多个因素任意的组合对比测试。如下图，为 Project: Subtitle 的实验设计。其中：
+	- 起始域为用户全流量。起始域的流量进入业务内部后，首先进入实验的起始层。
+	- 起始层分为三个域：A1/B1-1/B1-2。进入起始层的流量会根据权重随机分配给这三个域。
+	- 进入A1域后没有下一层，实验结束。返回“无字幕”场景，并上报实验数据。
+	- 进入B1-1/B1-2域的流量都被指向了下一层B2层。
+	- B2层分为B2-1/B2-2/B2-3三个域，进入B2层的流量再次根据权重随机分配给这三个域。
+	- 进入B2-1/B2-2/B2-3域的流量都指向了下一层B3层。
+	- B3层分为B3-1/B3-2三个域, 进入B3层的流量再次根据权重随机分配给这连个域。
+	- B3层之后实验结束，返回不同“字体大小”、“字体颜色”、“字体透明度”组合的字幕实验场景，并上报数据。
 ![avatar](picture/zone.png)
-// TODO 分局 Subtitle 这个例子详细的说明，目的使 PM/Developer 理解清楚
 
 # AB Test SDK 中 实验配置 本地缓存
 1. sdk 通过一个线程轮询AB test server的实验配置，并缓存本地。可以通过 sdk 指定的实验Project和设置同步周期。因此在进程的初始化阶段需要调用以下方法进行设置。
@@ -40,11 +47,11 @@ sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, 
 
 # AB Test SDK 中 hash 算法
 1. 	流量分流的方式：
-	- hash算法根据传入的 haskkey 作 hash取模运算来实现随机分流
+	- hash 算法根据传入的 haskkey 作 hash取模运算来实现随机分流
 	- 为保证同一个用户进入的实验始终是唯一，使得用户不会在 AB 实验中反复横跳。因此hashkey 通常使用 userID/deviceID 等唯一性的ID 保证 hash 取值的唯一性
 	- 某些与时间相关的场景，比如为了实现用户每天进行的 AB 实验都是随机的，可以 对 userID + date(日期) 进行hash,使得用户每天进入的 AB 实验都是随机的。
-	- 同时，在多层实验设计中，进入下一层的流量应该再次随机分配，对 userID + layerID 进行hash, 使得流量进入每层之后又再次随机分流。在本框架设计中，每层的流量都会再次随机分配，因此layerID 是求hash 值的必传参数  
-    - 其中 userID/deviceID/date 等在某些场景中需要拼接成hashkey透传下去，每层根据透传的hash 和当前的 layerID进行 hash.举例： AB 实验需要对所有的用户进行 AB test， 代码可以设计为：
+	- 同时，在多层实验设计中，进入下一层的流量应该再次随机分配，因此应该对 userID + layerID 进行hash, 使得流量进入每层之后又再次随机分流。在本框架设计中，每层的流量都会再次随机分配，因此layerID 是求 hash 值的必传参数  
+    - 其中 userID/deviceID/date 等在某些场景中需要拼接成hashkey透传下去，然后每层根据透传的hashkey 和当前的 layerID 进行hash.举例： AB 实验需要对所有的用户进行 AB test， 代码可以设计为：
 	```
 	// 调用实验, 使用 userID 作为 hashkey, 透传下去
 	Layer1(ctx, userID)
@@ -58,11 +65,55 @@ sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, 
 	...省略...
 	```
 
-# AB Test SDK 中 对流量的来源进行校验，确保实验流量的准确性
-// TODO: 父域校验的意义？父域校验的原理？
+# AB Test SDK 中 对流量的来源进行校验，确保实验流量的准确性	
+  在本 AB test 框架中，会对进入的每一层的流量进行“父域校验”，即校验该流量是否是来自于“父域”。  
+  如果流量不是来自于“父域”，则返回“空值”，因此业务开发必须要对实验增加默认分支，进行兜底。  
+  “父域校验”的作用是，可以排除因为代码bug等原因导致错误的流量进入实验，影响实验结果的准确性。   
+  起始层的“父域”是全流量，因此不需要校验。  
+ 
 
 # AB Test SDK 中 数据采点
-1. 实验在每一层都可以进行数据收集，并通过ctx传到下一层，并最终上传数据中心
+1. 实验数据可以在每一层中上报。
+```
+... 省略上下文 ...
+// 调用实验
+Layer1(ctx, userID)
+... 省略上下文 ...
+func Layer1(ctx context.Context, hashkey string) {
+		...
+		// 定义输出0
+		labOutput := &sdk.LabOutput{
+			ProjectID: Lab,
+			UserID:    strconv.Itoa(userID),
+			Time:      time.Now(),
+			Data:      make(map[string]interface{}), 
+			LabPath:   make([]string, 0),           
+		}		
+		// 上报实验数据
+		labOutput.Data["停留时间"] = 60
+		sdk.PushLabOutPut(labOutput) 
+		// 调用 layer2
+		Layer2(ctx, hashkey)
+		...
+}
+func Layer2(ctx context.Context, hashkey string) {
+		...
+		// 定义输出0
+		labOutput := &sdk.LabOutput{
+			ProjectID: Lab,
+			UserID:    strconv.Itoa(userID),
+			Time:      time.Now(),
+			Data:      make(map[string]interface{}), 
+			LabPath:   make([]string, 0),           
+		}		
+		// 上报实验数据
+		labOutput.Data["点击次数"] = 100
+		sdk.PushLabOutPut(labOutput) 
+		...
+}
+... 省略上下文 ...
+```
+2. 实验也可以在每一层都可以进行数据收集，并通过ctx传到下一层，并最终在收口处统一上传数据中心
 ```
 ... 省略上下文 ...
 // 定义输出0
@@ -79,11 +130,19 @@ Layer1(ctx, userID)
 ... 省略上下文 ...
 func Layer1(ctx context.Context, hashkey string) {
 		...
-		// 数据上报
-		labOutput.Data["点击次数"] = 10
+		// 收集实验数据，通过ctx透传下去，调用 layer2
+		labOutput := ctx.Value(sdk.CTXKey("output")).(*sdk.LabOutput)
+		labOutput.Data["停留时间"] = 60
+		Layer2(ctx, hashkey)
+		...
+}
+func Layer2(ctx context.Context, hashkey string) {
+		...
+		// 通过 ctx透传实验数据，在最后统一上报
+		labOutput := ctx.Value(sdk.CTXKey("output")).(*sdk.LabOutput)
+		labOutput.Data["点击次数"] = 100
 		sdk.PushLabOutPut(labOutput) 
 		...
-
 }
 ... 省略上下文 ...
 ```
@@ -101,16 +160,16 @@ targetZone := sdk.GetABTZone(hashkey, layerID)
 switch targetZone.Value {
 case "A":
 	// 数据采点，记录用户使用“原页面”。数据采点也可以在一个公共收口出统一上报，这样更合理。
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setHome("原主页")
 case "B" :
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setHome("新主页")
 case "C":
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setHome("原主页")
 case "D":
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setHome("原主页")
 // default 分支必须要有，保证业务正常
 default:
@@ -136,13 +195,13 @@ default:
 targetZone := sdk.GetABTZone(hashkey, "layer1 ID")
 switch targetZone.Value {
 case "A":
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setColor("字体 黑色")
 case "B" :
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setColor("字体 红色")
 case "C":
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setColor("字体 白色")
 default:
 	return setColor("默认字体颜色")
@@ -151,10 +210,10 @@ default:
 targetZone := sdk.GetABTZone(hashkey, "layer2 ID")
 switch targetZone.Value {
 case "E":
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setColor("背景 黄色")
 case "D" :
-	pushLabData(...)
+	sdk.PushLabOutPut(labOutput)
 	return setColor("背景 绿色")
 default:
 	return setColor("默认字体颜色")
