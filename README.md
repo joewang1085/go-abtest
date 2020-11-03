@@ -354,11 +354,10 @@ targetZone := sdk.GetABTZone(hashkey, "Layer2-3 ID")
 2. 单点故障问题，同上。但是sdk请求返回结果为空，因此业务必须增加默认策略分支，实现兜底行为，保证业务正常。
 
 
-# ab test server demo 说明
-1. db.Datainit() is a mock of database
-
 # how to run
-1. go run main.go
+1. run abtest server first. (See https://git.llsapp.com/hao.wang04/abtest-server)
+2. go run main.go -addr [server_addr] -port [server_addr] -lab [project_name] -users [user_num]
+
 
 # 参考链接
 ```
