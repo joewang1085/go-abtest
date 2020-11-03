@@ -154,6 +154,10 @@ func Layer2(ctx context.Context, hashkey string) {
 	- 参数projects: 指定需要同步的实验project
 	- 参数duration: 同步轮询的间隔
     - 原理
+使用举例：
+```
+sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
+```
 
 2. func GetABTZone(projectID, hashkey, layerID string) *Zone {...}  
 	- 作用：匹配实验
