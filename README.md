@@ -66,7 +66,7 @@ sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, 
 	```
 
 # AB Test SDK 中 对流量的来源进行校验，确保实验流量的准确性	
-  在本 AB test 框架中，会对进入的每一层的流量进行“父域校验”，即校验该流量是否是来自于“父域”。  
+  在本 AB test 框架中，会对进入每一层的流量进行“父域校验”，即校验该流量是否是来自于“父域”。  
   如果流量不是来自于“父域”，则返回“空值”，因此业务开发必须要对实验增加默认分支，进行兜底。  
   “父域校验”的作用是，可以排除因为代码bug等原因导致错误的流量进入实验，影响实验结果的准确性。   
   起始层的“父域”是全流量，因此不需要校验。  
@@ -146,6 +146,43 @@ func Layer2(ctx context.Context, hashkey string) {
 }
 ... 省略上下文 ...
 ```
+
+# sdk 的方法说明
+1. func SetCacheSyncDBFrequency(projects []string, duration time.Duration) {...}
+	- 作用：设置异步同步 AB test server 实验配置线程的指定实验和同步间隔
+	- 原理：单独的一个线程异步同步server端的实验配置
+	- 参数projects: 指定需要同步的实验project
+	- 参数duration: 同步轮询的间隔
+    - 原理
+
+2. func GetABTZone(projectID, hashkey, layerID string) *Zone {...}  
+	- 作用：匹配实验
+	- 原理：根据传入的 hashkey + layerID 作hash取模运算，根据指定的project的实验配置，进行匹配，返回匹配的域。
+	- 参数projectID: 指定实验
+	- 参数hashkey: 根据 hashkey + layerID 进行 hash取模运算，实现随机分流
+	- 参数layerID: 当前所在实验层的ID
+	- 返回值*Zone: 即根据运算后随机匹配的实验场景
+使用举例：
+```
+	targetZone := sdk.GetABTZone(project, hashkey, layerID)
+	switch targetZone.Value {
+	case "A":
+		...
+	case "B":
+		...
+	default:
+		...
+	}
+```
+
+3. func PushLabOutPut(data *LabOutput) {...}
+	- 作用：上传实验数据
+	- 其他：因为实验数据的存储格式待定，所以该方法可能变动，因此不作过多说明
+
+3. func GetLabOutput(projectID, path, tag string) []*LabOutput {...}
+	- 作用：根据查询条件查询和统计实验数据
+	- 其他：因为实验数据的存储格式待定，所以该方法可能变动，因此不作过多说明
+
 
 # 单一因素AB test设计 
 举例: APP 新主页首页AB Test 设计.  
