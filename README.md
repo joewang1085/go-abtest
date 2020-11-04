@@ -189,10 +189,6 @@ sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, 
 	- 作用：上传实验数据
 	- 其他：因为实验数据的存储格式待定，所以该方法可能变动，因此不作过多说明
 
-3. func GetLabOutput(projectID, path, tag string) []*LabOutput {...}
-	- 作用：根据查询条件查询和统计实验数据
-	- 其他：因为实验数据的存储格式待定，所以该方法可能变动，因此不作过多说明
-
 
 # 单一因素AB test设计 
 举例: APP 新首页 AB Test 设计.  
