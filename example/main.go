@@ -32,7 +32,7 @@ func main() {
 
 	// SetCacheSyncDBFrequency
 	fmt.Println("设置缓存同步数据库周期")
-	sdk.SetCacheSyncDBFrequency([]string{"Home", "Color", "ComplexColor", "Theme"}, time.Second*60)
+	sdk.SetCacheSyncDBFrequency([]string{Lab}, time.Second*60)
 
 	// 开启实验统计线程
 	go func() {
