@@ -1,3 +1,6 @@
+# how to use
+Clients use sdk to fetch AB test lab config by calling AB test server which such as the project of "abtest-server"
+
 # AB Test 简介
 AB测试是为Web或App界面或流程制作两个（A/B）或多个（A/B/n）版本，在同一时间维度，分别让组成成分相同（相似）的访客群组（目标人群）随机的访问这些版本，收集各群组的用户体验数据和业务数据，最后分析、评估出最好版本，正式采用。    
 
